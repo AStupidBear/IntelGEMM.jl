@@ -1,0 +1,7 @@
+name = "SGEMM"
+uuid = "46a1a280-e6c3-11e9-0321-d12035ae5ac9"
+authors = ["Yao Lu <luyaocns@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
