@@ -1,4 +1,4 @@
-using SGEMM
+using GEMM
 using Test
 
 for T in (Float32, Float64)

@@ -1,9 +1,13 @@
-module SGEMM
+module GEMM
 
-using LinearAlgebra, Libdl
+using LinearAlgebra, Libdl, Requires
 using LinearAlgebra: chkstride1, require_one_based_indexing
+import LinearAlgebra.BLAS: gemm!, gemv!
 
 include(joinpath("..", "deps", "deps.jl"))
+
+const BlasInt = Int32
+const libblas = libmkl_rt
 
 @enum Threading begin
     THREADING_INTEL
@@ -20,7 +24,7 @@ end
 end
 
 function set_threading_layer(layer::Threading = THREADING_INTEL)
-    err = ccall((:MKL_Set_Threading_Layer, libmkl_rt), Cint, (Cint,), layer)
+    err = ccall((:MKL_Set_Threading_Layer, libblas), Cint, (Cint,), layer)
     if err == -1
         throw(ErrorException("return value was -1"))
     end
@@ -28,7 +32,7 @@ function set_threading_layer(layer::Threading = THREADING_INTEL)
 end
 
 function set_interface_layer(interface = INTERFACE_LP64)
-    err = ccall((:MKL_Set_Interface_Layer, libmkl_rt), Cint, (Cint,), interface)
+    err = ccall((:MKL_Set_Interface_Layer, libblas), Cint, (Cint,), interface)
     if err == -1
         throw(ErrorException("return value was -1"))
     end
@@ -44,6 +48,7 @@ function __init__()
 
     set_threading_layer()
     set_interface_layer()
+    @require NNlib="872c559c-99b0-510c-b3b7-b6c96a88d5cd" include("nnlib.jl")
 end
 
 macro blasfunc(x)
@@ -63,37 +68,37 @@ for (gemm, elty) in
          #       CHARACTER TRANSA,TRANSB
          # *     .. Array Arguments ..
          #       DOUBLE PRECISION A(LDA,*),B(LDB,*),C(LDC,*)
-    function BLAS.gemm!(transA::AbstractChar, transB::AbstractChar,
+    function gemm!(transA::AbstractChar, transB::AbstractChar,
                    alpha::Union{($elty), Bool},
                    A::AbstractVecOrMat{$elty}, B::AbstractVecOrMat{$elty},
                    beta::Union{($elty), Bool},
                    C::AbstractVecOrMat{$elty})
-#           if any([stride(A,1), stride(B,1), stride(C,1)] .!= 1)
-#               error("gemm!: BLAS module requires contiguous matrix columns")
-#           end  # should this be checked on every call?
-        require_one_based_indexing(A, B, C)
-        m = size(A, transA == 'N' ? 1 : 2)
-        ka = size(A, transA == 'N' ? 2 : 1)
-        kb = size(B, transB == 'N' ? 1 : 2)
-        n = size(B, transB == 'N' ? 2 : 1)
-        if ka != kb || m != size(C,1) || n != size(C,2)
-            throw(DimensionMismatch("A has size ($m,$ka), B has size ($kb,$n), C has size $(size(C))"))
+    #           if any([stride(A,1), stride(B,1), stride(C,1)] .!= 1)
+    #               error("gemm!: BLAS module requires contiguous matrix columns")
+    #           end  # should this be checked on every call?
+            require_one_based_indexing(A, B, C)
+            m = size(A, transA == 'N' ? 1 : 2)
+            ka = size(A, transA == 'N' ? 2 : 1)
+            kb = size(B, transB == 'N' ? 1 : 2)
+            n = size(B, transB == 'N' ? 2 : 1)
+            if ka != kb || m != size(C,1) || n != size(C,2)
+                throw(DimensionMismatch("A has size ($m,$ka), B has size ($kb,$n), C has size $(size(C))"))
+            end
+            chkstride1(A)
+            chkstride1(B)
+            chkstride1(C)
+            ccall((@blasfunc($gemm), libblas), Cvoid,
+                (Ref{UInt8}, Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt},
+                Ref{BlasInt}, Ref{$elty}, Ptr{$elty}, Ref{BlasInt},
+                Ptr{$elty}, Ref{BlasInt}, Ref{$elty}, Ptr{$elty},
+                Ref{BlasInt}),
+                transA, transB, m, n,
+                ka, alpha, A, max(1,stride(A,2)),
+                B, max(1,stride(B,2)), beta, C,
+                max(1,stride(C,2)))
+            C
         end
-        chkstride1(A)
-        chkstride1(B)
-        chkstride1(C)
-        ccall((@blasfunc($gemm), libmkl_rt), Cvoid,
-            (Ref{UInt8}, Ref{UInt8}, Ref{Int32}, Ref{Int32},
-             Ref{Int32}, Ref{$elty}, Ptr{$elty}, Ref{Int32},
-             Ptr{$elty}, Ref{Int32}, Ref{$elty}, Ptr{$elty},
-             Ref{Int32}),
-             transA, transB, m, n,
-             ka, alpha, A, max(1,stride(A,2)),
-             B, max(1,stride(B,2)), beta, C,
-             max(1,stride(C,2)))
-        C
     end
-end
 end
 
 for (fname, elty) in ((:dgemv_,:Float64),
@@ -108,7 +113,7 @@ for (fname, elty) in ((:dgemv_,:Float64),
              #      CHARACTER TRANS
              #*     .. Array Arguments ..
              #      DOUBLE PRECISION A(LDA,*),X(*),Y(*)
-        function BLAS.gemv!(trans::AbstractChar, alpha::Union{($elty), Bool},
+        function gemv!(trans::AbstractChar, alpha::Union{($elty), Bool},
                        A::AbstractVecOrMat{$elty}, X::AbstractVector{$elty},
                        beta::Union{($elty), Bool}, Y::AbstractVector{$elty})
             require_one_based_indexing(A, X, Y)
@@ -121,10 +126,10 @@ for (fname, elty) in ((:dgemv_,:Float64),
                 throw(DimensionMismatch("the transpose of A has dimensions $n, $m, X has length $(length(X)) and Y has length $(length(Y))"))
             end
             chkstride1(A)
-            ccall((@blasfunc($fname), libmkl_rt), Cvoid,
-                (Ref{UInt8}, Ref{Int32}, Ref{Int32}, Ref{$elty},
-                 Ptr{$elty}, Ref{Int32}, Ptr{$elty}, Ref{Int32},
-                 Ref{$elty}, Ptr{$elty}, Ref{Int32}),
+            ccall((@blasfunc($fname), libblas), Cvoid,
+                (Ref{UInt8}, Ref{BlasInt}, Ref{BlasInt}, Ref{$elty},
+                 Ptr{$elty}, Ref{BlasInt}, Ptr{$elty}, Ref{BlasInt},
+                 Ref{$elty}, Ptr{$elty}, Ref{BlasInt}),
                  trans, size(A,1), size(A,2), alpha,
                  A, max(1,stride(A,2)), X, stride(X,1),
                  beta, Y, stride(Y,1))
