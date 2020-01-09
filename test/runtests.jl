@@ -1,4 +1,12 @@
 using SGEMM
 using Test
 
-@test Float32[2 1; 4 3] * Float32[1; 2] == Float32[4; 10]
+for T in (Float32, Float64)
+    A = T[2 1; 4 3]
+    Bv = T[1; 2]
+    B = reshape(Bv, :, 1)
+    Cv = T[4; 10]
+    C = reshape(Cv, :, 1)
+    @test A * Bv  == Cv
+    @test A * B == C
+end
