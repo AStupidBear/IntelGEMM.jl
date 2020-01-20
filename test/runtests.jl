@@ -1,4 +1,5 @@
 using GEMM
+using LinearAlgebra
 using Test
 
 for T in (Float32, Float64)
@@ -9,4 +10,6 @@ for T in (Float32, Float64)
     C = reshape(Cv, :, 1)
     @test A * Bv  == Cv
     @test A * B == C
+    eigen(Symmetric(A))
+    eigen(A)
 end
