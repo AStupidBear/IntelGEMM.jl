@@ -1,4 +1,4 @@
-using GEMM
+using IntelGEMM
 using LinearAlgebra
 using Test
 

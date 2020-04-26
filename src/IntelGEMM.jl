@@ -1,4 +1,4 @@
-module GEMM
+module IntelGEMM
 
 using LinearAlgebra, Libdl, Requires
 using LinearAlgebra: chkstride1, checksquare, require_one_based_indexing

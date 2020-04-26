@@ -1,4 +1,4 @@
-name = "GEMM"
+name = "IntelGEMM"
 uuid = "46a1a280-e6c3-11e9-0321-d12035ae5ac9"
 authors = ["Yao Lu <luyaocns@gmail.com>"]
 version = "0.1.0"
