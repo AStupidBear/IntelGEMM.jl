@@ -1,12 +1,12 @@
 module IntelGEMM
 
+using MKL_jll
+
 using LinearAlgebra, Libdl, Requires
 using LinearAlgebra: chkstride1, checksquare, require_one_based_indexing
 import LinearAlgebra.BLAS: gemm!, gemv!
 import LinearAlgebra.LAPACK: chkargsok, chklapackerror, chknonsingular, chkposdef, chkfinite
 import LinearAlgebra.LAPACK: geevx!, ggev!, syev!, syevr!, sygvd!
-
-include(joinpath("..", "deps", "deps.jl"))
 
 const BlasInt = Int32
 const libblas = libmkl_rt

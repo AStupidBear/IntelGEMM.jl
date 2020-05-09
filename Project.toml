@@ -1,16 +1,15 @@
 name = "IntelGEMM"
 uuid = "46a1a280-e6c3-11e9-0321-d12035ae5ac9"
 authors = ["Yao Lu <luyaocns@gmail.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
-BinaryProvider = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
 Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MKL_jll = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
 Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 
 [compat]
-BinaryProvider = "0.5"
 Requires = "0.5,1"
 julia = "1"
 
