@@ -43,12 +43,6 @@ function set_interface_layer(interface = INTERFACE_LP64)
 end
 
 function __init__()
-
-    if Sys.iswindows()
-        # On Windows, we have to open the threading library before calling libmkl_rt
-        dlopen(libmkl_intel_thread)
-    end
-
     set_threading_layer()
     set_interface_layer()
     @require NNlib="872c559c-99b0-510c-b3b7-b6c96a88d5cd" include("nnlib.jl")
